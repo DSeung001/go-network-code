@@ -1,4 +1,4 @@
-package main
+package network
 
 import (
 	"io"
@@ -6,9 +6,10 @@ import (
 	"testing"
 )
 
+// 3-4 예제
 func TestDial(t *testing.T) {
 	// 포트 미 지정시 랜덤 포트로 생성
-	listener, err := net.Listen("tcp", "127.0.0.1")
+	listener, err := net.Listen("tcp", "127.0.0.1:")
 	if err != nil {
 		t.Fatal(err)
 	}

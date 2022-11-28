@@ -1,10 +1,11 @@
-package main
+package network
 
 import (
 	"net"
 	"testing"
 )
 
+// 3-1 예제
 func TestListener(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 
