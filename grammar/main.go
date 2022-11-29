@@ -1,5 +1,281 @@
 package main
 
+import "time"
+
+// 채널(channel)
+/*
+데이터를 주고 받는 통로로, make()를 통해 미리 생성되어야 하며 채널 연산자 "<-"를 통해 데이터를 주고 받음
+흔히 goroutine들에서 데이터를 주고 받는 데 사용되며 상대방을 채널에서 기다림으로써
+별도의 lock을 걸지 않고 데이터를 동기화
+*/
+/*func main() {
+	// 정수형 채널을 생성한다.
+	ch := make(chan int)
+
+	go func() {
+		ch <- 123
+	}()
+
+	// Go 채널 수신, 송신은 서로 기다리기 때문에 별도로 대기코드를 추가하지 않음
+	var i int
+	i = <-ch
+	println(i)
+}*/
+// Go 채널 속성을 이용해서 아래와 같이 적용 가능
+/*func main() {
+	done := make(chan bool)
+	go func() {
+		for i := 0; i < 10; i++ {
+			fmt.Println(i)
+		}
+		done <- true
+	}()
+
+	<-done
+}*/
+/*
+Buffered Channel 은 수신자가 데이터를 받을 준비가 되지 않았더라도 버퍼의 수 만큼 데이터를 보내고 다른일을 할 수 있다.
+원래 아래코드는 데드락이 작동해야하지만, 버퍼 채널이므로 괜찮음
+*/
+/*func main() {
+	ch := make(chan int, 1)
+	ch <- 101 // 원래는 수신 루틴이 없어서 데드락이 발생해야함
+	fmt.Println(<-ch)
+}*/
+// 채널 닫아도 송신은 불가능할 뿐 수신은 가능하다
+/*func main() {
+	ch := make(chan int, 2)
+
+	ch <- 1
+	ch <- 2
+
+	println(<-ch)
+	println(<-ch)
+
+	if _, success := <-ch; !success {
+		println("더 이상 데이터 없음")
+	}
+}*/
+// 채널 range 문
+/*func main() {
+	ch := make(chan int, 2)
+	ch <- 1
+	ch <- 2
+
+	// 채널을 닫아야 range 문으로 수신 가능
+	close(ch)
+	for i := range ch {
+		println(i)
+	}
+
+}*/
+/*
+ 채널 select 문
+복수 채널들을 기다리면 준비된 채널을 실행하는 기능을 제공
+=> 즉 selet문은 여러 개의 case 문에서 각각 다른 채널을 기다리다가 준비된 채널에 맞춘 case를 실행
+*/
+func main() {
+	done1 := make(chan bool)
+	done2 := make(chan bool)
+
+	go run1(done1)
+	go run2(done2)
+
+EXIT:
+	for {
+		select {
+		case <-done1:
+			println("run1 완료")
+		case <-done2:
+			println("run2 완료")
+			break EXIT
+		}
+	}
+}
+
+func run1(done chan bool) {
+	done <- true
+}
+
+func run2(done chan bool) {
+	time.Sleep(2 * time.Second)
+	done <- true
+}
+
+// Go 루틴 (goroutine)
+/*
+GO 런타임이 고ㅓㅏㄴ리하는 Lightweight 경량 논리적 가상 쓰레드이다.
+"go" 키워드를 통해 사용, 비동기적으로 함수루틴이 실행됨, 기본 적으로 OS 스레드보다
+더 가벼움, Go 채널을 통해 Go 루틴 간의 통신이 자유료움
+*/
+/*func say(s string) {
+	for i := 0; i < 10; i++ {
+		fmt.Println(s, "***", i)
+	}
+}
+
+func main() {
+	//// 동기적
+	//say("Sync")
+	//// 비동기적
+	//go say("Async 1")
+	//go say("Async 2")
+	//go say("Async 3")
+
+	// 익명함수 goroutine
+	// Waitgroup 생성, 2개의 go루틴 기다림
+	var wait sync.WaitGroup
+	wait.Add(2)
+	go func() {
+		defer wait.Done()
+		fmt.Println("Hello")
+	}()
+	go func(msg string) {
+		defer wait.Done()
+		fmt.Println(msg)
+	}("Hi")
+
+	// Wait 기다림
+	wait.Wait()
+	// 메인 종료시 고루틴도 종료이므로 대기
+	time.Sleep(time.Second * 3)
+
+	// Go는 디폴트로 1개의 CPU를 사용하여 이를 시분할로하여 Go를 처리
+	// 만약 복수의 CPU가 있는 머신이라면
+	//runtime.GOMAXPROCS(2)
+
+}
+*/
+
+// defer, panic
+/*
+Go 언어의 defer 키워드는 특정 문장 혹은 함수를 나중에 실행하는 것으로
+defer를 호출한 함수가 리턴되기 직전에 실행함
+
+panic은 함수를 즉시 멈추고 리턴 작업을 진행, panic 모드 실행은 상위 함수에도 적용
+계속 콜스택을 타고 올라가며 적용되고 마지막에는 프로그램이 에러내고 종료
+*/
+/*func main() {
+	openFile("Invalid.txt")
+	println("Done")
+
+	f, err := os.Open("1.txt")
+	if err != nil {
+		println("error")
+		panic(err)
+	}
+
+	defer f.Close()
+
+	bytes := make([]byte, 1024)
+	f.Read(bytes)
+	println(len(bytes))
+}
+
+func openFile(fn string) {
+	// panic에도 호출
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("OPEN ERROR", r)
+		}
+	}()
+
+	f, err := os.Open(fn)
+	if err != nil {
+		panic(err)
+	}
+
+	defer f.Close()
+}*/
+
+// Go Error
+/*
+Go는 내장 타입으로 Error 라는 Interface 타입을 갖는다.
+Interface는 메서드 하나를 가지며 이 인터페이스를 구현하여 커스텀 에러 타입을 만듦
+*/
+/*type error interface {
+	Error() string
+}
+
+func main() {
+	f, err := os.Open("C:\\temp\\t.txt")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	println(f.Name())
+
+	_, err := otherFunc()
+
+	// err.(type) => 이런 식으로 에러 타입으로 다르게 처리 가능
+	switch err.(type) {
+	default:
+		println("ok")
+	case MyError:
+		log.Println("Log my error")
+	case error:
+		log.Fatal(err.Error())
+
+	}
+}*/
+
+// 인터페이스
+/*
+구조체가 필드들의 집합이라면, Interface는 메서드들의 집합체.
+Interface는 타입이 구현해야하는 메서드 원형을 정의한다. 하나는 사용자 정의 타입이 Interface를
+구현하기 위해서는 단순히 그 인터페이스가 갖는 모든 메서드들을 구현
+=> 타 언어랑 개념은 동일 한듯
+
+빈 인터페이스 개념이 존재하는 데, 모든 타입을 담을 수 있음
+=> Java에서 Object가 할 수 있는 역할이랑 비슷
+*/
+/*type Shape interface {
+	area() float64
+	perimeter() float64
+}
+
+// 구조체 선언
+type Rect struct{ width, height float64 }
+type Circle struct{ radius float64 }
+
+// Rect 타입에 대한 Shape 인터페이스 구현
+func (r Rect) area() float64      { return r.width * r.height }
+func (r Rect) perimeter() float64 { return 2 * (r.width + r.height) }
+
+// Circle 타입에 대한 Shpale 인터페이스 구현
+func (c Circle) area() float64      { return math.Pi * c.radius * c.radius }
+func (c Circle) perimeter() float64 { return 2 * math.Pi * c.radius }
+
+func main() {
+	r := Rect{10., 20.}
+	c := Circle{10}
+	showArea(r, c)
+
+	var x interface{}
+	x = 1
+	x = "Tom"
+
+	printIt(x) //Tom
+
+	var a interface{} = 1
+
+	i := a
+	j := a.(int)
+
+	println(i) // 포인터 주소
+	println(j) // 1
+}
+
+func printIt(v interface{}) {
+	fmt.Println(v)
+}
+
+func showArea(shapes ...Shape) {
+	for _, s := range shapes {
+		a := s.area()
+		println(a)
+	}
+}*/
+
 // 메서드(Method)
 /*
 타 언어 OOP는 클래스가 필드와 메서드를 함께 갖는 것과 달리 Go는 Struct가 필드만을 가지며
@@ -7,8 +283,11 @@ package main
 
 Go 메서드는 특별한 형태의 func
 함수 정의에서 func 키워드와 함수명 사이에 어떤 struct를 위한 메서드인지를 표시해야함
-*/
 
+Value vs 포인터 receiver
+포인터를 사용해서 변경 값을 적용 가능
+*/
+/*
 type Rect struct {
 	width, height int
 }
@@ -17,11 +296,18 @@ func (r Rect) area() int {
 	return r.width * r.height
 }
 
+func (r *Rect) area2() int {
+	r.width++
+	return r.width * r.height
+}
+
 func main() {
 	rect := Rect{10, 20}
 	area := rect.area()
 	println(area)
-}
+	area = rect.area2()
+	println(rect.width, area)
+}*/
 
 // 구조체(Struct)
 /*
